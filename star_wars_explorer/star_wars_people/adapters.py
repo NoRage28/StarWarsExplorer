@@ -1,15 +1,7 @@
-from abc import ABC, abstractmethod
 from datetime import datetime
 
 
-class StarWarsDataAdapter(ABC):
-
-    @abstractmethod
-    def data_adapter(self, **kwargs):
-        pass
-
-
-class StarWarsPeopleAdapter(StarWarsDataAdapter):
+class StarWarsPeopleAdapter:
 
     def data_adapter(self, people_data: list[dict], planets_data: list[dict]) -> list[dict]:
         required_people_data = []

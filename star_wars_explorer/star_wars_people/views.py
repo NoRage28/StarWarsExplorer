@@ -6,13 +6,15 @@ from .services import read_data_from_csv
 from rest_framework.response import Response
 from rest_framework import status
 from .tasks import download_dataset_task
+from rest_framework import views
+from celery.result import AsyncResult
 
 
 class DatasetViewSet(viewsets.ModelViewSet):
     queryset = Dataset.objects.all()
     serializer_class = DatasetViewSerializer
 
-    def retrieve(self, request, *args, **kwargs):
+    def retrieve(self, request, *args, **kwargs) -> Response:
         instance = self.get_object()
         serializer = self.get_serializer(instance=instance)
         file_name = serializer.data['name']
@@ -20,6 +22,15 @@ class DatasetViewSet(viewsets.ModelViewSet):
         return Response(file, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'])
-    def download_dataset(self, request):
-        download_dataset_task.delay()
-        return Response(status=status.HTTP_201_CREATED)
+    def download_dataset(self, request) -> Response:
+        result = download_dataset_task.delay()
+        return Response(result.id, status=status.HTTP_201_CREATED)
+
+
+class StatusTaskView(views.APIView):
+    def get(self, request, format=None):
+        task_id = self.request.query_params['task_id']
+        if task_id:
+            status_task = AsyncResult(id=task_id)
+            return Response(status_task.status)
+        return Response('Wrong task_id')
