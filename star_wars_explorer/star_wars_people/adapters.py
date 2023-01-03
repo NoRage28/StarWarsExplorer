@@ -26,7 +26,7 @@ class StarWarsPeopleAdapter:
         person['date'] = date_column_format
 
     def change_homeworld_column(self, person: dict, planets: dict):
-        person['homeworld'] = planets[person['homeworld']]
+        person['homeworld'] = planets.get(person['homeworld'])
 
     def drop_columns(self, person: dict) -> dict:
         required_columns = ['name', 'height', 'mass', 'hair_color', 'skin_color',

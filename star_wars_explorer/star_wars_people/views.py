@@ -2,12 +2,11 @@ from .models import Dataset
 from .serializers import DatasetViewSerializer
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from .services import read_data_from_csv
+from .services import read_data_from_csv, start_download_dataset_task
 from rest_framework.response import Response
 from rest_framework import status
-from .tasks import download_dataset_task
+from django.core.cache import cache
 from rest_framework import views
-from celery.result import AsyncResult
 
 
 class DatasetViewSet(viewsets.ModelViewSet):
@@ -23,14 +22,12 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def download_dataset(self, request) -> Response:
-        result = download_dataset_task.delay()
-        return Response(result.id, status=status.HTTP_201_CREATED)
+        cache_task_key = start_download_dataset_task()
+        return Response(cache_task_key, status=status.HTTP_201_CREATED)
 
 
-class StatusTaskView(views.APIView):
+class StatusTaskApiView(views.APIView):
     def get(self, request, format=None):
         task_id = self.request.query_params['task_id']
-        if task_id:
-            status_task = AsyncResult(id=task_id)
-            return Response(status_task.status)
-        return Response('Wrong task_id')
+        result = cache.get(task_id)
+        return Response(result)
