@@ -29,5 +29,5 @@ class DatasetViewSet(viewsets.ModelViewSet):
 class StatusTaskApiView(views.APIView):
     def get(self, request, format=None):
         task_id = self.request.query_params['task_id']
-        result = cache.get(task_id)
-        return Response(result)
+        task_status = cache.get(task_id)
+        return Response(task_status, status=status.HTTP_200_OK)

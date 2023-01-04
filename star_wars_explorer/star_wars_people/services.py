@@ -1,17 +1,11 @@
 import os
 from abc import ABC, abstractmethod
-from rest_framework.exceptions import APIException
 from .models import Dataset
 from django.core.files import File
 import csv
-from .clienst import StarWarsApiClient
-from .adapters import StarWarsPeopleAdapter
 from .utils import create_file_name
 from django.conf import settings
 from datetime import datetime
-
-people_data = StarWarsApiClient().get_people()
-planets_data = StarWarsApiClient().get_planets()
 
 
 class DataWriterAndDBSaver(ABC):
@@ -55,9 +49,17 @@ class CSVDataWriterAndDBSaver(DataWriterAndDBSaver):
         os.remove(f'{self.file_name}.csv')
 
 
-def get_required_data_to_write():
-    required_data = StarWarsPeopleAdapter().data_adapter(people_data=people_data, planets_data=planets_data)
-    return required_data
+class ImportStarwarsDataSet:
+    def __init__(self, client, adapter, data_writer_service):
+        self.client = client
+        self.adapter = adapter
+        self.data_writer_service = data_writer_service
+
+    def import_data(self):
+        people_data = self.client.get_people()
+        planets_data = self.client.get_planets()
+        star_wars_data = self.adapter.data_adapter(people_data=people_data, planets_data=planets_data)
+        self.data_writer_service.write_data_and_save_to_db(data=star_wars_data)
 
 
 def read_data_from_csv(file_name: str) -> list[str]:
@@ -69,12 +71,6 @@ def read_data_from_csv(file_name: str) -> list[str]:
 
 def start_download_dataset_task():
     from .tasks import download_dataset_task
-    try:
-        cache_task_key = str(datetime.utcnow().timestamp())
-        download_dataset_task.delay(cache_task_key)
-
-    except Exception as exc:
-        raise APIException(
-            {"Import task error": exc.args},
-        ) from exc
+    cache_task_key = str(datetime.utcnow().timestamp())
+    download_dataset_task.delay(cache_task_key)
     return cache_task_key
